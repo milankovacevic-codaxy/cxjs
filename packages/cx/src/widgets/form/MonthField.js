@@ -63,6 +63,7 @@ export class MonthField extends Field {
             maxValue: undefined,
             maxExclusive: undefined,
             icon: undefined,
+            disabledPeriods: undefined,
          },
          ...arguments,
       );
@@ -139,6 +140,16 @@ export class MonthField extends Field {
             else if (d == 0 && data.minExclusive)
                data.error = StringTemplate.format(this.minExclusiveErrorText, data.minValue);
          }
+
+         if (data.disabledPeriods) {
+            const date = data.date;
+            const month = date.getMonth() + 1;
+            const quarter = Math.floor(month / 4) + 1;
+            const year = date.getFullYear();
+            if (isUnselectableYear(data.disabledPeriods, year)) data.error = "Invalid year";
+            else if (isUnselectableQuarter(data.disabledPeriods, year, quarter)) data.error = "Invalid quarter";
+            else if (isUnselectableMonth(data.disabledPeriods, year, month)) data.error = "Invalid month";
+         }
       }
    }
 
@@ -162,6 +173,7 @@ export class MonthField extends Field {
                maxExclusiveErrorText: this.maxExclusiveErrorText,
                minValueErrorText: this.minValueErrorText,
                minExclusiveErrorText: this.minExclusiveErrorText,
+               disabledPeriods: this.disabledPeriods,
             }}
             label={this.labelPlacement && getContent(this.renderLabel(context, instance, "label"))}
             help={this.helpPlacement && getContent(this.renderHelp(context, instance, "help"))}
@@ -203,6 +215,19 @@ export class MonthField extends Field {
       }
    }
 }
+
+const isUnselectableYear = (disabledPeriods, year) =>
+   disabledPeriods && disabledPeriods.years && disabledPeriods.years.find((y) => y == year);
+const isUnselectableQuarter = (disabledPeriods, year, quarter) =>
+   disabledPeriods &&
+   disabledPeriods.quarters &&
+   disabledPeriods.quarters[year] &&
+   disabledPeriods.quarters[year].find((q) => q == quarter);
+const isUnselectableMonth = (disabledPeriods, year, month) =>
+   disabledPeriods &&
+   disabledPeriods.months &&
+   disabledPeriods.months[year] &&
+   disabledPeriods.months[year].find((m) => m == month);
 
 MonthField.prototype.baseClass = "monthfield";
 MonthField.prototype.maxValueErrorText = "Select {0:d} or before.";

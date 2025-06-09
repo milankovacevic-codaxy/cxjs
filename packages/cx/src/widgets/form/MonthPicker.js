@@ -59,6 +59,7 @@ export class MonthPicker extends Field {
             minExclusive: undefined,
             maxValue: undefined,
             maxExclusive: undefined,
+            disabledPeriods: undefined,
          },
          ...arguments,
       );
@@ -111,6 +112,16 @@ export class MonthPicker extends Field {
             if (d < 0) data.error = StringTemplate.format(this.minValueErrorText, data.minValue);
             else if (d == 0 && data.minExclusive)
                data.error = StringTemplate.format(this.minExclusiveErrorText, data.minValue);
+         }
+
+         if (data.disabledPeriods) {
+            const date = data.date;
+            const month = date.getMonth() + 1;
+            const quarter = Math.floor(month / 4) + 1;
+            const year = date.getFullYear();
+            if (isUnselectableYear(data.disabledPeriods, year)) data.error = "Invalid year";
+            else if (isUnselectableQuarter(data.disabledPeriods, year, quarter)) data.error = "Invalid quarter";
+            else if (isUnselectableMonth(data.disabledPeriods, year, month)) data.error = "Invalid month";
          }
       }
    }
@@ -172,8 +183,30 @@ const validationCheck = (date, data) => {
 
    if (data.minValue && !lowerBoundCheck(date, data.minValue, data.minExclusive)) return false;
 
+   if (data.disabledPeriods && date) {
+      const month = date.getMonth() + 1;
+      const quarter = Math.floor(month / 4) + 1;
+      const year = date.getFullYear();
+      if (isUnselectableYear(data.disabledPeriods, year)) return false;
+      if (isUnselectableQuarter(data.disabledPeriods, year, quarter)) return false;
+      if (isUnselectableMonth(data.disabledPeriods, year, month)) return false;
+   }
+
    return true;
 };
+
+const isUnselectableYear = (disabledPeriods, year) =>
+   disabledPeriods && disabledPeriods.years && disabledPeriods.years.find((y) => y == year);
+const isUnselectableQuarter = (disabledPeriods, year, quarter) =>
+   disabledPeriods &&
+   disabledPeriods.quarters &&
+   disabledPeriods.quarters[year] &&
+   disabledPeriods.quarters[year].find((q) => q == quarter);
+const isUnselectableMonth = (disabledPeriods, year, month) =>
+   disabledPeriods &&
+   disabledPeriods.months &&
+   disabledPeriods.months[year] &&
+   disabledPeriods.months[year].find((m) => m == month);
 
 const monthNumber = (date) => {
    return date.getFullYear() * 12 + date.getMonth();
@@ -465,17 +498,22 @@ export class MonthPickerComponent extends VDOM.Component {
 
       for (let y = start; y <= end; y++) {
          let rows = [];
+         const unselectableYear = isUnselectableYear(data.disabledPeriods, y);
          for (let q = 0; q < 4; q++) {
             let row = [];
+            const unselectableQuarter = isUnselectableQuarter(data.disabledPeriods, y, q + 1);
             if (q == 0)
                row.push(
                   <th
                      key="year"
                      rowSpan={4}
                      data-point={`Y-${y}`}
-                     className={CSS.element(baseClass, "year", {
-                        cursor: showCursor && this.state.column == "Y" && y == this.state.cursorYear,
-                     })}
+                     className={CSS.expand(
+                        CSS.state({ unselectable: unselectableYear }),
+                        CSS.element(baseClass, "year", {
+                           cursor: showCursor && this.state.column == "Y" && y == this.state.cursorYear,
+                        }),
+                     )}
                      onMouseEnter={this.handleMouseEnter}
                      onMouseDown={this.handleMouseDown}
                      onMouseUp={this.handleMouseUp}
@@ -484,9 +522,18 @@ export class MonthPickerComponent extends VDOM.Component {
                   </th>,
                );
 
+            let disabledQuarterMonths = 0;
             for (let i = 0; i < 3; i++) {
                let m = q * 3 + i + 1;
-               let unselectable = !validationCheck(new Date(y, m - 1, 1), data);
+
+               const unselectableMonth = isUnselectableMonth(data.disabledPeriods, y, m);
+               let unselectable =
+                  unselectableYear ||
+                  unselectableQuarter ||
+                  unselectableMonth ||
+                  !validationCheck(new Date(y, m - 1, 1), data);
+
+               if (unselectable) disabledQuarterMonths++;
                let mno = y * 12 + m - 1;
                let handle = true; //isTouchDevice(); //mno === from || mno === to - 1;
                row.push(
@@ -525,6 +572,7 @@ export class MonthPickerComponent extends VDOM.Component {
                            this.state.column == "Q" &&
                            y == this.state.cursorYear &&
                            q == this.state.cursorQuarter,
+                        unselectable: unselectableYear || unselectableQuarter || disabledQuarterMonths == 3,
                      })}
                      data-point={`Y-${y}-Q-${q}`}
                      onMouseEnter={this.handleMouseEnter}

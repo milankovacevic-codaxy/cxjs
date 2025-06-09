@@ -99,6 +99,19 @@ interface MonthFieldProps extends FieldProps {
     * You can pass any valid additional MonthPicker props here, such as `startYear`, `endYear`, etc.
     * Refer to the MonthPicker component documentation for a full list of supported options. */
    monthPickerOptions?: Cx.Config;
+
+   /**
+    * Defines time periods that should be disabled.
+    */
+   disabledPeriods?: Cx.Prop<{
+      years: number[];
+      months: {
+         [year: number]: number[];
+      };
+      quarters: {
+         [year: number]: number[];
+      };
+   }>;
 }
 
 export class MonthField extends Cx.Widget<MonthFieldProps> {}

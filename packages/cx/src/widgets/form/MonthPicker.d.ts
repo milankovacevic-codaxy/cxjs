@@ -84,6 +84,19 @@ interface MonthPickerProps extends FieldProps {
     * When true, the quarters section will not render.
     */
    hideQuarters?: boolean;
+
+   /**
+    * Defines time periods that should be disabled.
+    */
+   disabledPeriods?: Cx.Prop<{
+      years: number[];
+      months: {
+         [year: number]: number[];
+      };
+      quarters: {
+         [year: number]: number[];
+      };
+   }>;
 }
 
 export class MonthPicker extends Cx.Widget<MonthPickerProps> {}
